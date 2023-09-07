@@ -11,7 +11,7 @@ from sqlalchemy.orm import sessionmaker
 engine = create_engine('sqlite:///Bank_management.db')
 Session = sessionmaker(bind=engine)
 session = Session()
-Base.metadata.create_all(engine)
+# Base.metadata.create_all(engine)
 # from cli import session
 
 @click.group()
