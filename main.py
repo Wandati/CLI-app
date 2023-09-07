@@ -33,7 +33,7 @@ def create_customer(name):
     else:
         click.echo(f"Customer {new_customer.name} already exists")
 
-
+    
 @click.command() 
 @click.argument('customer_id', type=int)
 @click.argument('initial_deposit', type=float)
