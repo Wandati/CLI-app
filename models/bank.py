@@ -6,7 +6,7 @@ class Bank(Base):
     __tablename__ = 'banks'
     id = Column(Integer,primary_key=True)
     name = Column(String)
-    adress = Column(String,nullable=True)
+    location = Column(String,nullable=True)
     users = relationship('Customer',secondary=customer_bank_association,back_populates='banks')
     account = relationship('Account',back_populates='banks')
     def __repr__(self):
