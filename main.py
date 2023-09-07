@@ -4,67 +4,79 @@ from models.bank import Bank
 from models.base import Base
 import click
 import random
-from models.base import Base
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-# import random
 engine = create_engine('sqlite:///Bank_management.db')
 Session = sessionmaker(bind=engine)
 session = Session()
-# Base.metadata.create_all(engine)
-# from cli import session
+banks = { 'names':['Equity','Cooperative','Ncba','Absa'],
+         'location':['Nairobi','Kisumu','Mombasa']
+         }
 
+session.query(Bank).delete()
+bank1 = Bank(name = banks['names'][2],location =banks['location'][0] )
+bank2 = Bank(name = banks['names'][1],location =banks['location'][2] )
+bank3 = Bank(name = banks['names'][0],location =banks['location'][1] )
+session.add_all([bank1,bank2,bank3])
+session.commit()
+list_banks = [bank1,bank2,bank3]
+
+    
 @click.group()
 def cli():
     pass
+@cli.command()
 
-@click.command()
-# @click.argument('first_name')
-# @click.argument('last_name')
-@click.argument('name')
+@click.option('--name', prompt='Customer name', help='Name of the Customer')
 # creating a customer
 def create_customer(name):
     new_customer = session.query(Customer).filter_by(name=name).first()
     if not new_customer:
         new_customer = Customer(name=name)
         session.add(new_customer)
+        # bank1.users.append(new_customer)
+        random.choice(list_banks).users.append(new_customer)
         session.commit()
         click.echo(f"Customer: {name} has been created.")
     else:
         click.echo(f"Customer {new_customer.name} already exists")
-
     
-@click.command() 
-@click.argument('customer_id', type=int)
-@click.argument('initial_deposit', type=float)
-def open_account(customer_id,initial_deposit):
-    
-    customer = session.query(Customer).filter_by(id=customer_id).first()
+@cli.command() 
+@click.option('--id', prompt='Customer id', help='id of the Customer',type=int)
+@click.option('--amount', prompt='Amount', help='deposit Amount',type = float)
+def open_account(id,amount):
+    banks = session.query(Bank).all()
+    customer = session.query(Customer).filter_by(id=id).first()
     
     if customer:
-        if initial_deposit >= 500:
-                new_account = Account(number= random.randint(1000000,6000000),amount=initial_deposit)
+        if amount >= 500:
+                new_account = Account(number= random.randint(1000000,6000000),amount=amount)
                 # session.add(new_account)
                 customer.accounts.append(new_account)
+                for bank in banks:
+                    if customer in bank.users:
+                        bank.account.append(new_account)
+                # customer.banks.append(new_account)
+                # customer.banks.
+                # random.choice(list_banks).account.append(new_account)
                 session.commit()
-                click.echo(f"Account opened for {customer.name} with an initial deposit of: {initial_deposit} Kshs.")
+                click.echo(f"Account opened for {customer.name} with an initial deposit of: {amount} Kshs.")
                 
-                
-                # session.add(new_account)
-                # session.commit()
         else:
             
             click.echo("deposit cannot be less than 500!")
     else:
         click.echo("Customer not Found!")
 
-@click.command()
-@click.argument('user_id',type=int)
-@click.argument('amount', type=float)
 
-def make_deposit(user_id,amount):
-    user = session.query(Customer).filter_by(id=user_id).first()
-    account = session.query(Account).filter_by(customer_id =user_id).first()
+@cli.command
+@click.option('--id', prompt='Customer id', help='id of the Customer',type =int)
+@click.option('--amount', prompt='Deposit Amount', help='deposit Amount',type=float)
+
+
+def make_deposit(id,amount):
+    user = session.query(Customer).filter_by(id=id).first()
+    account = session.query(Account).filter_by(customer_id =id).first()
     if user and account:
         if amount >= 1:
             account.amount += amount
@@ -77,13 +89,12 @@ def make_deposit(user_id,amount):
     else:
         click.echo(" User does not exist!")
     
-
-@click.command()
-@click.argument('user_id',type =int)
-@click.argument('amount', type=float)
-def make_withdrawal(user_id,amount):
-    user = session.query(Customer).filter_by(id=user_id).first()
-    account = session.query(Account).filter_by(customer_id=user_id).first()
+@cli.command() 
+@click.option('--id', prompt='Customer id', help='id of the Customer',type=int)
+@click.option('--amount', prompt='Withdrwal Amount', help='Withdrawal Amount',type = int)
+def make_withdrawal(id,amount):
+    user = session.query(Customer).filter_by(id=id).first()
+    account = session.query(Account).filter_by(customer_id=id).first()
     if user and account :
         if amount > 0 and  amount < account.amount:
             account.amount -= amount
@@ -95,12 +106,14 @@ def make_withdrawal(user_id,amount):
         click.echo(" Account Does not exist!")
     else:
         click.echo("User does not exist!")
-@click.command()
-@click.argument('user_id',type=int)
-def check_personal_accounts(user_id):
+
+@cli.command() 
+@click.option('--id', prompt='Customer id', help='id of the Customer',type=int)
+
+def check_personal_accounts(id):
     # accounts = session.query(Account).all()
     
-    customer = session.query(Customer).filter_by(id=user_id).first()
+    customer = session.query(Customer).filter_by(id=id).first()
     if customer and not customer.accounts:
         click.echo(f'Customer: {customer.name}\n' + 'No Accounts Found!')
     elif customer and customer.accounts:
@@ -110,38 +123,35 @@ def check_personal_accounts(user_id):
 
     else:
         return click.echo('User not found!')
-            
-            
+                  
         
+@cli.command
+@click.option('--id',prompt="Bank Id",help="Displaying Bank details")
+def display_bank_users(id):
+    bank = session.query(Bank).filter_by(id=id).first()
+    
+    if bank and not bank.users:
+        click.echo(f'Bank: {bank.name}\n' + 'No Users Registered!')
+    elif bank and bank.users:
+        click.echo(f'Bank: {bank.name}')
+        for user in bank.users:
+            click.echo(f'Users: {user.name}')
 
-@click.command()
-# click.arg
-def display_user_accounts():
-    Users = session.query(Customer).all()
-    for user in Users:
-        if user.accounts:
-            
-            click.echo(f'Username: {user.name} \n'+ f'Accounts: {user.accounts}')
-        else:
-            click.echo(f'Username: {user.name} \n'+ 'Accounts: None ')
-            
-@click.command()
-@click.argument('user_id',type=int)
-def delete_customer(user_id):
-    customer = session.query(Customer).filter_by(id=user_id).first()
+    else:
+        return click.echo('Bank not found!')
+        
+        
+@cli.command() 
+@click.option('--id', prompt='Customer id', help='id of the Customer to delete',type=int)
+def delete_customer(id):
+    customer = session.query(Customer).filter_by(id=id).first()
     if customer:
         session.delete(customer)
         session.commit()
         click.echo(f'Customer {customer.name} has been deleted successfully.')
     else:
-        click.echo("No customers found.")         
-cli.add_command(create_customer)
-cli.add_command(open_account)
-cli.add_command(make_deposit)
-cli.add_command(make_withdrawal)
-cli.add_command(check_personal_accounts)
-cli.add_command(display_user_accounts)
-cli.add_command(delete_customer)
+        click.echo("No customers found.") 
+   
 
 if __name__ == '__main__':
     cli()
